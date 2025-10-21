@@ -52,14 +52,13 @@ if(numeroVisitas < MAX_VISITAS){
     historicoVisitas[numeroVisitas] = atual->nome;
     numeroVisitas++;
 }
-
-do
-{
 printf("=============================================\n");
 printf("============JOGO DETECTIVE QUEST=============\n");
 printf("=============================================\n");
 printf("\nBem-vindo à Mansão! Você pode explorar usando 'e' (esquerda), 'd' (direita) ou 's' (sair).\n");
-printf("Você está no: %s \n", atual->nome);
+do
+{
+printf("Você está no: %s \n\n", atual->nome);
 printf("O que você deseja fazer:\n");
 
 if(atual->esquerda != NULL){
@@ -72,6 +71,7 @@ printf("(s) Sair da Mansão\n");
 printf("Escolha: ");
 scanf(" %c", &escolha);
 escolha = tolower(escolha); //converte a entrada do usuário para minúscula caso digite maiúscula
+getchar();
 
 atual = explorarSalas(atual, escolha, historicoVisitas, &numeroVisitas);
 
@@ -79,7 +79,7 @@ atual = explorarSalas(atual, escolha, historicoVisitas, &numeroVisitas);
 
 // === EXIBE O HISTÓRICO ===
 
-printf("\n\n---- HISTÓRICO DE SALAS VISITADAS ----\n");
+printf("\n\n---- HISTÓRICO DE LUGARES VISITADOS ----\n");
 for(int i = 0; i < numeroVisitas; i++){
     printf("%d. %s\n", i + 1, historicoVisitas[i]);
 }
@@ -95,7 +95,7 @@ liberarMemoria(raiz);
 
 //--------------------------INÍCIO DAS FUNÇÕES--------------------------
 void pausa() {
-    printf("\nPressione [ENTER] para continuar...");
+    printf("\nPressione [ENTER] para continuar...\n");
     getchar(); // Espera o usuário pressionar Enter
 }
 
@@ -129,15 +129,19 @@ struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *
     if (escolha == 'e'){
         if(raiz->esquerda != NULL){ //move o ponteiro
             raiz = raiz->esquerda;
+            printf("\n----------------------\n");
             printf("Você entrou no(a) %s\n", raiz->nome);
+            printf("----------------------\n");
 
             if(*numvisitas < MAX_VISITAS){
             historico[*numvisitas] = raiz->nome;
             (*numvisitas)++;
             }
+            pausa();
         }
         else{
-        printf("[CAMINHO BLOQUEADO] Não há nada à esquerda.\n");
+            printf("[CAMINHO BLOQUEADO] Não há nada à esquerda.\n");
+            pausa();
         }
     }
     else if(escolha == 'd'){
@@ -149,8 +153,10 @@ struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *
             historico[*numvisitas] = raiz->nome;
             (*numvisitas)++;
             }
+            pausa();
         } else{
             printf("[CAMINHO BLOQUEADO] Não há nada à direita.\n");
+            pausa();
         }
     }
     else if(escolha == 's'){
