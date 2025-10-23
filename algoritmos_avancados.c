@@ -12,31 +12,57 @@
  */
 typedef struct No {
     char nome [30];
+    char pista[256];
     struct No *esquerda;
     struct No *direita;
 } No;
 
+// --- ESTRUTURA DAS PISTAS (Árvore Binária de BUSCA - BST) ---
+// armazena as pistas em ordem alfabética
+typedef struct NoPista{
+    char pista[256];
+    struct NoPista *esquerda;
+    struct NoPista *direita;
+} NoPista;
+
 //--------------------------PROTÓTIPO DAS FUNÇÕES-----------------------
-struct No* criarSala(char *valor);
-struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas);
+// Funções da Mansão
+struct No* criarSala(char *valor, char *pista);
+struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas, NoPista **raizPistas);
 void liberarMemoria(struct No *raiz);
 void pausa();
 
+// Funções da Árvore de Pistas (BST)
+NoPista* inserirPista(NoPista* raiz, char* pista);
+void exibirPistas(NoPista* raiz);
+void liberarPistas(NoPista* raiz);
+
 int main() {
 
-    // === CRIAÇÃO E MONTAGEM DA ÁRVORE ===
+printf("=============================================\n");
+printf("============JOGO DETECTIVE QUEST=============\n");
+printf("=============================================\n");
+printf("\nBem-vindo à Mansão! Você pode explorar usando 'e' (esquerda), 'd' (direita) ou 's' (sair).\n");
+    
+// === CRIAÇÃO E MONTAGEM DA ÁRVORE ===
+// Agora passa a pista para cada sala.
+// NULL usado para salas sem pistas.
 
-struct No* raiz = criarSala("Hall de Entrada"); // Cria o nó raiz da árvore
-raiz->esquerda = criarSala("Sala de Estar");
-raiz->direita = criarSala("Cozinha");
-raiz->esquerda->esquerda = criarSala("Quarto 1");
-raiz->esquerda->esquerda->esquerda = criarSala("Jardim");
-raiz->esquerda->direita = criarSala("Banheiro 1");
-raiz->direita->esquerda = criarSala("Quarto 2");
-raiz->direita->esquerda->direita = criarSala("Sótão");
-raiz->direita->esquerda->esquerda = criarSala("Banheiro 2");
-raiz->direita->direita = criarSala("Corredor");
-raiz->direita->direita->direita = criarSala("Porão");
+struct No* raiz = criarSala("Hall de Entrada", "O cofre está arrombado. Há terra e folhas secas no chão.");
+    raiz->esquerda = criarSala("Sala de Estar", "Uma janela para o Jardim está aberta. Há uma xícara de chá fria na mesa.");
+    raiz->direita = criarSala("Cozinha", "Um par de botas de trabalho grandes, sujas de terra, está perto da porta.");
+    raiz->esquerda->esquerda = criarSala("Quarto 1", "Na gaveta, um diário trancado.");
+    raiz->esquerda->esquerda->esquerda = criarSala("Jardim", "As ferramentas de jardinagem estão todas limpas e guardadas.");
+    raiz->esquerda->direita = criarSala("Banheiro 1", NULL); // Sem pista
+    raiz->direita->esquerda = criarSala("Quarto 2 (Governanta)", "Uma caixa de joias vazia e um grampo de cabelo torto estão na penteadeira.");
+    raiz->direita->esquerda->direita = criarSala("Sótão", "O COLAR! Está num baú, ao lado de um uniforme com graxa na manga.");
+    raiz->direita->esquerda->esquerda = criarSala("Banheiro 2", "No lixo, um pano manchado de graxa preta.");
+    raiz->direita->direita = criarSala("Corredor", "O armário de ferramentas está com a fechadura lascada.");
+    raiz->direita->direita->direita = criarSala("Porão", "Uma caixa de ferramentas aberta. O espaço de um Pé de Cabra está vazio e sujo de graxa.");
+
+
+// === INICIALIZAÇÃO DA ÁRVORE DE PISTAS (BST) ===
+NoPista *raizPista = NULL;// A árvore de pistas começa VAZIA.
 
 // === INÍCIO DA EXPLORAÇÃO INTERATIVA ===
 
@@ -52,10 +78,13 @@ if(numeroVisitas < MAX_VISITAS){
     historicoVisitas[numeroVisitas] = atual->nome;
     numeroVisitas++;
 }
-printf("=============================================\n");
-printf("============JOGO DETECTIVE QUEST=============\n");
-printf("=============================================\n");
-printf("\nBem-vindo à Mansão! Você pode explorar usando 'e' (esquerda), 'd' (direita) ou 's' (sair).\n");
+
+if(atual->pista[0] != '\0'){
+    printf("\nPISTA ENCONTRADA: %s\n", atual->pista);
+    raizPista = inserirPista(raizPista, atual->pista);
+    pausa();
+}
+
 do
 {
 printf("Você está no: %s \n\n", atual->nome);
@@ -73,7 +102,9 @@ scanf(" %c", &escolha);
 escolha = tolower(escolha); //converte a entrada do usuário para minúscula caso digite maiúscula
 getchar();
 
-atual = explorarSalas(atual, escolha, historicoVisitas, &numeroVisitas);
+// Passamos o ENDEREÇO da raizPistas (&raizPistas)
+// para que a função possa modificá-la
+atual = explorarSalas(atual, escolha, historicoVisitas, &numeroVisitas, &raizPista);
 
 } while (escolha != 's');
 
@@ -85,10 +116,20 @@ for(int i = 0; i < numeroVisitas; i++){
 }
 printf("------------------------------------\n");
 // --- FIM DA EXIBIÇÃO ---
+// === EXIBE AS PISTAS COLETADAS (EM ORDEM ALFABÉTICA) ===
+printf("\n\n---- PISTAS COLETADAS (EM ORDEM ALFABÉTICA) ----\n");
+if(raizPista == NULL){
+    printf("Nenhuma Pista Coletada.\n");
+} else{
+    exibirPistas(raizPista); // Chama a exibição em-ordem
+}
 
+
+printf("------------------------------------\n");
 printf("Limpando a memória da mansão...\n");
 liberarMemoria(raiz);
-
+printf("Limpando a memória das pistas...\n");
+liberarPistas(raizPista);
     return 0;
 }
 
@@ -107,10 +148,15 @@ void pausa() {
  * cria e inicializa os ponteiros esquerda e direita
  * retorna o endereço da memória armazenado pela variável novo
  */
-struct No* criarSala(char *valor){
+struct No* criarSala(char *valor, char *pista){
     struct No* novo = (struct No*) malloc(sizeof(struct No));
 
     strcpy(novo->nome, valor);
+    if (pista != NULL){
+        strcpy(novo->pista, pista);
+    } else {
+        strcpy(novo->pista, ""); //Se a pista for NULL, define como string vazia
+    }
     novo->esquerda = NULL;
     novo->direita = NULL;
 
@@ -123,30 +169,27 @@ struct No* criarSala(char *valor){
  * @param escolha A letra do jogador.
  * @param historico O array do histórico (passado por referência).
  * @param numvisitas Um PONTEIRO para o contador de visitas.
+ * @param raizPistas Um PONTEIRO PARA O PONTEIRO da raiz da árvore de pistas.
  * @return O ponteiro para o NOVO nó.
  */
-struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas){ // Recebe 'char', retorna 'struct No*'
+struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas, NoPista** raizPistas){ // Recebe 'char', retorna 'struct No*'
+    struct No *proximoNo = raiz; // Nó temporário para checagem
+
     if (escolha == 'e'){
         if(raiz->esquerda != NULL){ //move o ponteiro
-            raiz = raiz->esquerda;
-            printf("\n----------------------\n");
-            printf("Você entrou no(a) %s\n", raiz->nome);
-            printf("----------------------\n");
-
-            if(*numvisitas < MAX_VISITAS){
-            historico[*numvisitas] = raiz->nome;
-            (*numvisitas)++;
-            }
+            proximoNo = raiz->esquerda; // Pega o próximo nó
+          
             pausa();
         }
         else{
             printf("[CAMINHO BLOQUEADO] Não há nada à esquerda.\n");
             pausa();
+            return raiz; // Retorna o nó atual (não se moveu)
         }
     }
     else if(escolha == 'd'){
         if(raiz->direita != NULL){
-            raiz = raiz->direita;
+            proximoNo = raiz->direita;
             printf("Você entrou no(a) %s\n", raiz->nome);
 
             if (*numvisitas < MAX_VISITAS) {
@@ -157,24 +200,54 @@ struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *
         } else{
             printf("[CAMINHO BLOQUEADO] Não há nada à direita.\n");
             pausa();
+            return raiz; // Retorna o nó atual (não se moveu)
         }
     }
     else if(escolha == 's'){
         printf("\nAté logo! Saindo da mansão... Volte Sempre!\n");
+        return raiz; // Retorna o nó atual
     }
     else{
         printf("[OPÇÃO INVÁLIDA] Tente 'e', 'd' ou 's'.\n");
+        return raiz; // Retorna o nó atual
     }
-    return raiz;
+    
+    // Se o movimento foi válido atualiza tudo
+    raiz = proximoNo; // 1.Move o Jogador
+
+    //2. Imprime o Local
+    printf("\n----------------------\n");
+    printf("Você entrou no(a) %s\n", raiz->nome);
+    printf("----------------------\n");
+
+    // 3. Adiciona ao histórico de visitas
+    if(*numvisitas < MAX_VISITAS){
+    historico[*numvisitas] = raiz->nome;
+    (*numvisitas)++;
+    }
+
+    //4. (NOVO) Checa se há pista e a adiciona na ÁRVORE BST
+    if(raiz->pista[0] != '\0'){ // '\0' é o fim de uma string. Se [0] é '\0', a string está vazia.
+        printf("PISTA ENCONTRADA: %s\n", raiz->pista);
+
+        // Insere a pista na BST.
+        // *raizPistas usada para "referenciar" o ponteiro para ponteiro
+        *raizPistas = inserirPista(*raizPistas, raiz->pista);
+
+    }
+    printf("------------------------------------------------");
+    pausa();
+    return raiz; // Retorna o NOVO nó atual
 }
 
 
 /**
- * @brief Libera a memória alocada para os ponteiros das estruturas
+ * @brief Libera a memória alocada para os ponteiros das estruturas da Árvore da Mansão
  * @param Estrutura raiz criada para armazenar a árvore
  * usa a função free
  * usa a recursividade para liberar primeiro dos galhos da esquerda e depois da direita
  * após isso, libera o nó principal
+ * PÓS-ORDEM
  */
 void liberarMemoria(struct No *raiz){
     if(raiz != NULL){
@@ -184,9 +257,70 @@ void liberarMemoria(struct No *raiz){
     }
 }
 
+/**
+ * @brief Cria um nó da árvore de Pistas.
+ */
+NoPista* criarNoPista(char *pista){
+    NoPista* novo = (NoPista*) malloc(sizeof(NoPista));
+    strcpy(novo->pista, pista);
+    novo->esquerda = NULL;
+    novo->direita = NULL;
+    return novo;
+}
 
+/**
+ * @brief Insere uma nova pista na BST (em ordem alfabética).
+ * Esta é uma função recursiva padrão de inserção em BST.
+ */
+NoPista* inserirPista(NoPista *raiz, char *pista){
+    // 1. Se a árvore está vazia, cria um novo nó.
+    if(raiz == NULL){
+        return criarNoPista(pista);
+    }
+    // 2. Compara a nova pista com a pista da raiz
+    int comparacao = strcmp(pista, raiz->pista);
 
+    // 3. Passo Recursivo:
+    if(comparacao < 0){
+        // Se a nova pista é "menor" (vem antes no alfabeto), insere na esquerda.
+        raiz->esquerda = inserirPista(raiz->esquerda, pista);
+    }
+    else if(comparacao > 0){
+        // Se a nova pista é "maior" (vem depois no alfabeto), insere na direita.
+        raiz->direita = inserirPista(raiz->direita, pista);
+        // Se (comparacao == 0), a pista já existe, então não faz nada.
+    }
+    return raiz; // Retorna a raiz (potencialmente atualizada)
+}
 
+/**
+ * @brief Exibe as pistas da BST em ordem alfabética.
+ * Isso é um percurso "em-ordem" (esquerda, raiz, direita).
+ */
+void exibirPistas(NoPista *raiz){
+    if(raiz == NULL){
+        return;
+    }
+    // 1. Visita a sub-árvore esquerda (pistas que vêm antes)
+    exibirPistas(raiz->esquerda);
+
+    // 2. Visita a raiz (imprime a pista atual)
+    printf("- %s\n", raiz->pista);
+
+    // 3. Visita a sub-árvore direita (pistas que vêm depois)
+    exibirPistas(raiz->direita);
+}
+
+/**
+ * @brief Libera a memória da Árvore de Pistas (Pós-Ordem).
+ */
+void liberarPistas(NoPista * raiz){
+    if(raiz != NULL){
+        liberarPistas(raiz->esquerda);
+        liberarPistas(raiz->direita);
+        free(raiz);
+    }
+}
 
 
 //-------------------------------------------------------
@@ -195,16 +329,8 @@ void liberarMemoria(struct No *raiz){
 // Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
 // Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
    
-// 🌱 Nível Novato: Mapa da Mansão com Árvore Binária
-    //
-    // - Crie uma struct Sala com nome, e dois ponteiros: esquerda e direita.
-    // - Use funções como criarSala(), conectarSalas() e explorarSalas().
-    // - A árvore pode ser fixa: Hall de Entrada, Biblioteca, Cozinha, Sótão etc.
-    // - O jogador deve poder explorar indo à esquerda (e) ou à direita (d).
-    // - Finalize a exploração com uma opção de saída (s).
-    // - Exiba o nome da sala a cada movimento.
-    // - Use recursão ou laços para caminhar pela árvore.
-    // - Nenhuma inserção dinâmica é necessária neste nível.
+
+
 
     // 🔍 Nível Aventureiro: Armazenamento de Pistas com Árvore de Busca
     //
