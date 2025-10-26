@@ -65,6 +65,7 @@ void liberarHash();
 
 // Funções de Julgamento
 void verificarSuspeitoFinal(NoPista *raizPistas);
+void contarPistas(NoPista *raiz);
 
 
 // Variáveis Globais de Suspeitos (Simplificação - Nível Mestre)
@@ -210,6 +211,11 @@ void pausa() {
 struct No* criarSala(char *valor, char *pista){
     struct No* novo = (struct No*) malloc(sizeof(struct No));
 
+    if (novo == NULL) {
+        printf("Erro de alocacao de memoria para criarSala!\n");
+        exit(1);
+    }
+
     strcpy(novo->nome, valor);
     if (pista != NULL){
         strcpy(novo->pista, pista);
@@ -321,6 +327,10 @@ void liberarMemoria(struct No *raiz){
  */
 NoPista* criarNoPista(char *pista){
     NoPista* novo = (NoPista*) malloc(sizeof(NoPista));
+    if (novo == NULL) {
+        printf("Erro de alocacao de memoria para criarNoPista!\n");
+        exit(1);
+    }
     strcpy(novo->pista, pista);
     novo->esquerda = NULL;
     novo->direita = NULL;
@@ -347,8 +357,8 @@ NoPista* inserirPista(NoPista *raiz, char *pista){
     else if(comparacao > 0){
         // Se a nova pista é "maior" (vem depois no alfabeto), insere na direita.
         raiz->direita = inserirPista(raiz->direita, pista);
-        // Se (comparacao == 0), a pista já existe, então não faz nada.
     }
+    // Se (comparacao == 0), a pista já existe, então não faz nada.
     return raiz; // Retorna a raiz (potencialmente atualizada)
 }
 
@@ -381,36 +391,182 @@ void liberarPistas(NoPista * raiz){
     }
 }
 
+// --- FUNÇÕES DA TABELA HASH ---
 
-//-------------------------------------------------------
-// Desafio Detective Quest
-// Tema 4 - Árvores e Tabela Hash
-// Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
-// Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
-   
+/**
+ * @brief Função de Hashing simples baseada na soma dos valores ASCII.
+ * @param chave A string da pista.
+ * @return O índice da Tabela Hash (0 a TAMANHO_TABELA - 1).
+ */
+int funcaoHash(const char *chave) {
+    unsigned long hash = 0;
+    for (int i = 0; i < strlen(chave); i++) {
+        hash = hash + chave[i];
+    }
+    return hash % TAMANHO_TABELA;
+}
 
+/**
+ * @brief Insere associação pista/suspeito na tabela hash.
+ * @param pista A string da pista (chave).
+ * @param suspeito O nome do suspeito (valor).
+ */
+void inserirNaHash(const char *pista, const char *suspeito) {
+    int indice = funcaoHash(pista);
 
+    // Cria um novo item
+    ItemHash *novoItem = (ItemHash*) malloc(sizeof(ItemHash));
+    if (novoItem == NULL) {
+        printf("Erro de alocacao de memoria para inserirNaHash!\n");
+        return;
+    }
 
-    // 🔍 Nível Aventureiro: Armazenamento de Pistas com Árvore de Busca
-    //
-    // - Crie uma struct Pista com campo texto (string).
-    // - Crie uma árvore binária de busca (BST) para inserir as pistas coletadas.
-    // - Ao visitar salas específicas, adicione pistas automaticamente com inserirBST().
-    // - Implemente uma função para exibir as pistas em ordem alfabética (emOrdem()).
-    // - Utilize alocação dinâmica e comparação de strings (strcmp) para organizar.
-    // - Não precisa remover ou balancear a árvore.
-    // - Use funções para modularizar: inserirPista(), listarPistas().
-    // - A árvore de pistas deve ser exibida quando o jogador quiser revisar evidências.
+    // Copia os dados
+    strncpy(novoItem->pista, pista, sizeof(novoItem->pista) - 1);
+    novoItem->pista[sizeof(novoItem->pista) - 1] = '\0';
+    strncpy(novoItem->suspeito, suspeito, sizeof(novoItem->suspeito) - 1);
+    novoItem->suspeito[sizeof(novoItem->suspeito) - 1] = '\0';
 
-    // 🧠 Nível Mestre: Relacionamento de Pistas com Suspeitos via Hash
-    //
-    // - Crie uma struct Suspeito contendo nome e lista de pistas associadas.
-    // - Crie uma tabela hash (ex: array de ponteiros para listas encadeadas).
-    // - A chave pode ser o nome do suspeito ou derivada das pistas.
-    // - Implemente uma função inserirHash(pista, suspeito) para registrar relações.
-    // - Crie uma função para mostrar todos os suspeitos e suas respectivas pistas.
-    // - Adicione um contador para saber qual suspeito foi mais citado.
-    // - Exiba ao final o “suspeito mais provável” baseado nas pistas coletadas.
-    // - Para hashing simples, pode usar soma dos valores ASCII do nome ou primeira letra.
-    // - Em caso de colisão, use lista encadeada para tratar.
-    // - Modularize com funções como inicializarHash(), buscarSuspeito(), listarAssociacoes().
+    // Insere no início da lista encadeada (tratamento de colisão)
+    novoItem->proximo = tabelaHash[indice];
+    tabelaHash[indice] = novoItem;
+}
+
+/**
+ * @brief Consulta o suspeito correspondente a uma pista.
+ * @param pista A string da pista (chave).
+ * @return O nome do suspeito (valor) ou NULL se não encontrado.
+ */
+const char* encontrarSuspeito(const char *pista) {
+    int indice = funcaoHash(pista);
+    ItemHash *atual = tabelaHash[indice];
+
+    // Percorre a lista encadeada no índice
+    while (atual != NULL) {
+        if (strcmp(atual->pista, pista) == 0) {
+            return atual->suspeito; // Encontrado!
+        }
+        atual = atual->proximo;
+    }
+    return NULL; // Não encontrado
+}
+
+/**
+ * @brief Inicializa a tabela hash, definindo todos os ponteiros como NULL.
+ */
+void inicializarHash() {
+    for (int i = 0; i < TAMANHO_TABELA; i++) {
+        tabelaHash[i] = NULL;
+    }
+}
+
+/**
+ * @brief Libera a memória alocada para a Tabela Hash.
+ */
+void liberarHash() {
+    for (int i = 0; i < TAMANHO_TABELA; i++) {
+        ItemHash *atual = tabelaHash[i];
+        while (atual != NULL) {
+            ItemHash *temp = atual;
+            atual = atual->proximo;
+            free(temp);
+        }
+        tabelaHash[i] = NULL;
+    }
+}
+
+// --- FUNÇÕES DE JULGAMENTO FINAL ---
+
+/**
+ * @brief Conduz à fase de julgamento final, solicita a acusação e verifica a evidência.
+ * @param raizPistas A raiz da BST contendo as pistas coletadas pelo jogador.
+ */
+void verificarSuspeitoFinal(NoPista *raizPistas) {
+    char acusacao[30];
+    int contagemPistas[MAX_SUSPEITOS] = {0};
+    int escolhaSuspeito = -1;
+
+    printf("\n\n************************************\n");
+    printf("****** FASE DE ACUSAÇÃO FINAL ******\n");
+    printf("************************************\n");
+
+    if (raizPistas == NULL) {
+        printf("Você não coletou nenhuma pista. Acusação indisponível.\n");
+        return;
+    }
+
+    contarPistas(raizPistas, contagemPistas);
+
+    printf("\n** Pistas Coletadas por Suspeito **\n");
+    for (int i = 0; i < MAX_SUSPEITOS; i++) {
+        printf("%d. %s: %d Pista(s)\n", i + 1, NOMES_SUSPEITOS[i], contagemPistas[i]);
+    }
+
+    // 2. SOLICITAÇÃO DA ACUSAÇÃO
+    do {
+        printf("\nAcuse o culpado (digite o número do suspeito 1 a %d): ", MAX_SUSPEITOS);
+        if (scanf("%d", &escolhaSuspeito) != 1 || escolhaSuspeito < 1 || escolhaSuspeito > MAX_SUSPEITOS) {
+            printf("Opção inválida. Tente novamente.\n");
+            // Limpa o buffer de entrada
+            while (getchar() != '\n');
+            escolhaSuspeito = -1; 
+        }
+        // Consome a nova linha após o número
+        while (getchar() != '\n'); 
+    } while (escolhaSuspeito == -1);
+
+    // Obtém o nome do suspeito acusado
+    strcpy(acusacao, NOMES_SUSPEITOS[escolhaSuspeito - 1]);
+
+    // 3. VERIFICAÇÃO FINAL
+    int indiceAcusado = escolhaSuspeito - 1;
+
+    printf("\n------------------------------------\n");
+    printf("ACUSADO: %s\n", acusacao);
+
+    // O Culpado REAL, segundo as pistas inseridas na Hash, é o Lucas Varga (Filho).
+    const char *CULPADO_REAL = "Lucas Varga (Filho)"; 
+
+    if (contagemPistas[indiceAcusado] >= 2) {
+        printf("EVIDÊNCIA SUFICIENTE: Você possui %d pista(s) que apontam para %s.\n", contagemPistas[indiceAcusado], acusacao);
+        
+        if (strcmp(acusacao, CULPADO_REAL) == 0) {
+            printf("\nPARABÉNS, DETETIVE! VOCÊ ACERTOU!\n");
+            printf("Com base nas pistas, a sua acusação de **%s** está correta.\n", CULPADO_REAL);
+        } else {
+            printf("\nACUSAÇÃO FALHOU!\n");
+            printf("Você tinha evidência, mas a pessoa acusada, **%s**, era inocente.\n", acusacao);
+            printf("O verdadeiro culpado era: **%s**.\n", CULPADO_REAL);
+        }
+    } else {
+        printf("EVIDÊNCIA INSUFICIENTE: Você só possui %d pista(s) para sustentar a acusação contra %s.\n", contagemPistas[indiceAcusado], acusacao);
+        printf("\nACUSAÇÃO FALHOU!\n");
+        printf("Você não conseguiu provar o caso. O verdadeiro culpado, **%s**, escapou!\n", CULPADO_REAL);
+    }
+    printf("------------------------------------\n");
+}
+
+/**
+ * @brief Percorre a BST de pistas e incrementa o contador do suspeito associado.
+ * @param raiz A raiz da BST de pistas.
+ * @param contagemPistas O array a ser atualizado com a contagem de pistas.
+ */
+void contarPistas(NoPista *raiz, int contagemPistas[]) {
+    if (raiz == NULL) return;
+
+    // Percurso Em-Ordem 
+    contarPistas(raiz->esquerda, contagemPistas);
+
+    const char *suspeitoPista = encontrarSuspeito(raiz->pista);
+    if (suspeitoPista != NULL) {
+        // Relaciona a pista coletada ao suspeito e incrementa o contador
+        for (int i = 0; i < MAX_SUSPEITOS; i++) {
+            if (strcmp(suspeitoPista, NOMES_SUSPEITOS[i]) == 0) {
+                contagemPistas[i]++;
+                break;
+            }
+        }
+    }
+
+    contarPistas(raiz->direita, contagemPistas);
+}
