@@ -16,21 +16,21 @@
  */
 typedef struct No {
     char nome [30];
-    char pista[256];
+    char pista[512];
     struct No *esquerda;
     struct No *direita;
 } No;
 
 // --- ESTRUTURA DAS PISTAS (Árvore Binária de BUSCA - BST) ---
 typedef struct NoPista{
-    char pista[256];
+    char pista[512];
     struct NoPista *esquerda;
     struct NoPista *direita;
 } NoPista;
 
 // --- ESTRUTURAS DA TABELA HASH (Suspeitos) ---
 typedef struct ItemHash {
-    char pista[256];
+    char pista[512];
     char suspeito[30];
     struct ItemHash *proximo;
 } ItemHash;
@@ -535,4 +535,5 @@ void verificarSuspeitoFinal(NoPista *raizPistas) {
         printf("Você não conseguiu provar o caso. O verdadeiro culpado, **%s**, escapou!\n", CULPADO_REAL);
     }
     printf("------------------------------------\n");
+    pausa();
 }
