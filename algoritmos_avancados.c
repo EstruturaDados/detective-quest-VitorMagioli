@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 
+//--------------------------DEFINIÇÕES GLOBAIS-----------------------
 #define MAX_VISITAS 100
 #define TAMANHO_TABELA 5 
 #define MAX_SUSPEITOS 4
@@ -21,7 +22,6 @@ typedef struct No {
 } No;
 
 // --- ESTRUTURA DAS PISTAS (Árvore Binária de BUSCA - BST) ---
-// armazena as pistas em ordem alfabética
 typedef struct NoPista{
     char pista[256];
     struct NoPista *esquerda;
@@ -29,20 +29,13 @@ typedef struct NoPista{
 } NoPista;
 
 // --- ESTRUTURAS DA TABELA HASH (Suspeitos) ---
-
-/**
- * @brief Estrutura para a Lista Encadeada dentro da Tabela Hash.
- */
 typedef struct ItemHash {
     char pista[256];
     char suspeito[30];
     struct ItemHash *proximo;
 } ItemHash;
 
-/**
- * @brief A Tabela Hash é um array de ponteiros para ItemHash (Listas Encadeadas).
- */
-ItemHash *tabelaHash[TAMANHO_TABELA];
+ItemHash *tabelaHash[TAMANHO_TABELA]; // Tabela Hash Global
 
 //--------------------------PROTÓTIPO DAS FUNÇÕES-----------------------
 // Funções da Mansão
@@ -52,6 +45,7 @@ void liberarMemoria(struct No *raiz);
 void pausa();
 
 // Funções da Árvore de Pistas (BST)
+NoPista* criarNoPista(char *pista);
 NoPista* inserirPista(NoPista* raiz, char* pista);
 void exibirPistas(NoPista* raiz);
 void liberarPistas(NoPista* raiz);
@@ -64,16 +58,16 @@ void inicializarHash();
 void liberarHash();
 
 // Funções de Julgamento
-void verificarSuspeitoFinal(NoPista *raizPistas);
-void contarPistas(NoPista *raiz);
+void verificarSuspeitoFinal(NoPista *raizPistas); 
+void contarPistas(NoPista *raiz, int contagemPistas[]);
 
 
-// Variáveis Globais de Suspeitos (Simplificação - Nível Mestre)
+// Variáveis Globais de Suspeitos
 const char *NOMES_SUSPEITOS[MAX_SUSPEITOS] = {
-    "Helena Varga (Esposa)", 
-    "Lucas Varga (Filho)", 
-    "Sofia Mendes (Assistente)", 
-    "Professor Otto Schmidt (Rival)"
+    "Sofia Mendes (Governanta)", // O Culpado
+    "Chefe Marcelo (Cozinheiro)", 
+    "Sra. Elara (Hóspede)",
+    "Sr. Arthur (Jardineiro)"
 };
 
 int main() {
@@ -81,43 +75,43 @@ int main() {
     // Inicializa a Tabela Hash
     inicializarHash();
 
-    // === DEFINIÇÃO DAS ASSOCIAÇÕES PISTA-SUSPEITO (Nível Mestre) ===
-    // Associações de Pistas (Pistas Reais)
-    inserirNaHash("O cofre está arrombado. Há terra e folhas secas no chão.", "Lucas Varga (Filho)");
-    inserirNaHash("Uma janela para o Jardim está aberta. Há uma xícara de chá fria na mesa.", "Helena Varga (Esposa)");
-    inserirNaHash("Um par de botas de trabalho grandes, sujas de terra, está perto da porta.", "Lucas Varga (Filho)");
-    inserirNaHash("Na gaveta, um diário trancado.", "Helena Varga (Esposa)");
-    inserirNaHash("As ferramentas de jardinagem estão todas limpas e guardadas.", "Professor Otto Schmidt (Rival)");
-    inserirNaHash("Uma caixa de joias vazia e um grampo de cabelo torto estão na penteadeira.", "Sofia Mendes (Assistente)");
-    inserirNaHash("O COLAR! Está num baú, ao lado de um uniforme com graxa na manga.", "Lucas Varga (Filho)");
-    inserirNaHash("No lixo, um pano manchado de graxa preta.", "Lucas Varga (Filho)");
-    inserirNaHash("O armário de ferramentas está com a fechadura lascada.", "Lucas Varga (Filho)");
-    inserirNaHash("Uma caixa de ferramentas aberta. O espaço de um Pé de Cabra está vazio e sujo de graxa.", "Lucas Varga (Filho)");
+    // === DEFINIÇÃO DAS ASSOCIAÇÕES PISTA-SUSPEITO ===
+    // As pistas cruciais (6 ao todo) apontam para a Governanta
+    inserirNaHash("O cofre principal, ao lado da escadaria, está arrombado. No chão, você vê algumas folhas secas e um pouco de terra, como se tivessem caído de um sapato. As pegadas de terra parecem ir para a direita (Cozinha), mas as folhas secas parecem ter sido sopradas para a esquerda (Sala de Estar).", "Sofia Mendes (Governanta)");
+    inserirNaHash("Na penteadeira, você vê uma pequena caixa de joias, vazia, com o forro de veludo arranhado. Ao lado, um grampo de cabelo de metal, torto.", "Sofia Mendes (Governanta)");
+    inserirNaHash("No lixo, você encontra um pedaço de pano manchado de graxa preta. Cheira a óleo de máquina.", "Sofia Mendes (Governanta)");
+    inserirNaHash("A porta do armário de ferramentas no fim do corredor está arrombada, e a madeira está lascada. Parece que algo de metal foi usado para forçá-la.", "Sofia Mendes (Governanta)");
+    inserirNaHash("O porão está úmido e cheio de ferramentas de manutenção. Você encontra uma caixa de ferramentas aberta. Nela, um espaço vazio coberto de graxa preta, com o formato de um... Pé de Cabra.", "Sofia Mendes (Governanta)");
+    inserirNaHash("O sótão está empoeirado e cheio de móveis velhos. Escondido debaixo de um lençol, você encontra um pequeno baú. Dentro dele... o colar de diamantes roubado! Ao lado, um uniforme de Governanta com manchas de graxa na manga.", "Sofia Mendes (Governanta)");
+
+    // Pistas Falsas (Red Herrings)
+    inserirNaHash("Uma sala luxuosa. A janela que dá para o Jardim está entreaberta, e mais folhas secas estão no carpete. Em cima da mesa de centro, uma xícara de chá fria e um livro de romance.", "Sra. Elara (Hóspede)");
+    inserirNaHash("Um quarto de hóspedes, arrumado. A cama está feita. Na gaveta, você encontra um diário trancado. Parece pertencer a uma visitante recente.", "Sra. Elara (Hóspede)");
+    inserirNaHash("O jardim está bem cuidado. Perto da janela da Sala de Estar, você vê um ancinho e um saco de adubo. As ferramentas de jardinagem estão todas aqui, limpas.", "Sr. Arthur (Jardineiro)");
+    inserirNaHash("A cozinha está movimentada. O Chefe reclama que o jantar será atrasado. Perto da porta de serviço (que leva ao Quarto 2), você vê um par de botas de trabalho sujas de terra, grandes demais para uma mulher.", "Chefe Marcelo (Cozinheiro)");
 
     printf("=============================================\n");
     printf("============JOGO DETECTIVE QUEST=============\n");
     printf("=============================================\n");
     printf("\nBem-vindo à Mansão! Você pode explorar usando 'e' (esquerda), 'd' (direita) ou 's' (sair).\n");
         
-    // === CRIAÇÃO E MONTAGEM DA ÁRVORE ===
-    // Agora passa a pista para cada sala.
-    // NULL usado para salas sem pistas.
-
-    struct No* raiz = criarSala("Hall de Entrada", "O cofre está arrombado. Há terra e folhas secas no chão.");
-        raiz->esquerda = criarSala("Sala de Estar", "Uma janela para o Jardim está aberta. Há uma xícara de chá fria na mesa.");
-        raiz->direita = criarSala("Cozinha", "Um par de botas de trabalho grandes, sujas de terra, está perto da porta.");
-        raiz->esquerda->esquerda = criarSala("Quarto 1", "Na gaveta, um diário trancado.");
-        raiz->esquerda->esquerda->esquerda = criarSala("Jardim", "As ferramentas de jardinagem estão todas limpas e guardadas.");
-        raiz->esquerda->direita = criarSala("Banheiro 1", NULL); // Sem pista
-        raiz->direita->esquerda = criarSala("Quarto 2 (Governanta)", "Uma caixa de joias vazia e um grampo de cabelo torto estão na penteadeira.");
-        raiz->direita->esquerda->direita = criarSala("Sótão", "O COLAR! Está num baú, ao lado de um uniforme com graxa na manga.");
-        raiz->direita->esquerda->esquerda = criarSala("Banheiro 2", "No lixo, um pano manchado de graxa preta.");
-        raiz->direita->direita = criarSala("Corredor", "O armário de ferramentas está com a fechadura lascada.");
-        raiz->direita->direita->direita = criarSala("Porão", "Uma caixa de ferramentas aberta. O espaço de um Pé de Cabra está vazio e sujo de graxa.");
+    // === CRIAÇÃO E MONTAGEM DA ÁRVORE (MANSÃO) ===
+    // As strings de pista nas salas DEVEM ser idênticas às strings na Tabela Hash.
+    struct No* raiz = criarSala("Hall de Entrada", "O cofre principal, ao lado da escadaria, está arrombado. No chão, você vê algumas folhas secas e um pouco de terra, como se tivessem caído de um sapato. As pegadas de terra parecem ir para a direita (Cozinha), mas as folhas secas parecem ter sido sopradas para a esquerda (Sala de Estar).");
+    raiz->esquerda = criarSala("Sala de Estar", "Uma sala luxuosa. A janela que dá para o Jardim está entreaberta, e mais folhas secas estão no carpete. Em cima da mesa de centro, uma xícara de chá fria e um livro de romance.");
+    raiz->direita = criarSala("Cozinha", "A cozinha está movimentada. O Chefe reclama que o jantar será atrasado. Perto da porta de serviço (que leva ao Quarto 2), você vê um par de botas de trabalho sujas de terra, grandes demais para uma mulher.");
+    raiz->esquerda->esquerda = criarSala("Quarto 1", "Um quarto de hóspedes, arrumado. A cama está feita. Na gaveta, você encontra um diário trancado. Parece pertencer a uma visitante recente.");
+    raiz->esquerda->esquerda->esquerda = criarSala("Jardim", "O jardim está bem cuidado. Perto da janela da Sala de Estar, você vê um ancinho e um saco de adubo. As ferramentas de jardinagem estão todas aqui, limpas.");
+    raiz->esquerda->direita = criarSala("Banheiro 1", NULL); // Sem pista
+    raiz->direita->esquerda = criarSala("Quarto 2 (Governanta)", "Na penteadeira, você vê uma pequena caixa de joias, vazia, com o forro de veludo arranhado. Ao lado, um grampo de cabelo de metal, torto.");
+    raiz->direita->esquerda->direita = criarSala("Sótão", "O sótão está empoeirado e cheio de móveis velhos. Escondido debaixo de um lençol, você encontra um pequeno baú. Dentro dele... o colar de diamantes roubado! Ao lado, um uniforme de Governanta com manchas de graxa na manga.");
+    raiz->direita->esquerda->esquerda = criarSala("Banheiro 2", "No lixo, você encontra um pedaço de pano manchado de graxa preta. Cheira a óleo de máquina.");
+    raiz->direita->direita = criarSala("Corredor", "A porta do armário de ferramentas no fim do corredor está arrombada, e a madeira está lascada. Parece que algo de metal foi usado para forçá-la.");
+    raiz->direita->direita->direita = criarSala("Porão", "O porão está úmido e cheio de ferramentas de manutenção. Você encontra uma caixa de ferramentas aberta. Nela, um espaço vazio coberto de graxa preta, com o formato de um... Pé de Cabra.");
 
 
     // === INICIALIZAÇÃO DA ÁRVORE DE PISTAS (BST) ===
-    NoPista *raizPista = NULL;// A árvore de pistas começa VAZIA.
+    NoPista *raizPista = NULL;
 
     // === INÍCIO DA EXPLORAÇÃO INTERATIVA ===
 
@@ -125,8 +119,8 @@ int main() {
     char escolha = '\0';
 
     // === CRIAÇÃO DO HISTÓRICO ===
-    char* historicoVisitas[MAX_VISITAS]; //array para guardar os nomes
-    int numeroVisitas = 0; //contador de visitas
+    char* historicoVisitas[MAX_VISITAS]; 
+    int numeroVisitas = 0; 
 
     // Salva a primeira sala (Hall de Entrada) no histórico
     if(numeroVisitas < MAX_VISITAS){
@@ -141,10 +135,11 @@ int main() {
     }
 
     do
-    {
+    { // Exibe a sala atual e opções
+    printf("\n----------------------\n");
     printf("Você está no: %s \n\n", atual->nome);
     printf("O que você deseja fazer:\n");
-
+        // Opções de movimento
     if(atual->esquerda != NULL){
         printf("(e) Para esquerda você vai para %s\n", atual->esquerda->nome);
     } 
@@ -154,14 +149,13 @@ int main() {
     printf("(s) Sair da Mansão\n");
     printf("Escolha: ");
     scanf(" %c", &escolha);
-    escolha = tolower(escolha); //converte a entrada do usuário para minúscula caso digite maiúscula
-    getchar();
+    escolha = tolower(escolha); // Converte para minúscula
+    while (getchar() != '\n'); // Limpa o buffer: consome o \n deixado pelo ENTER (e qualquer outro caractere digitado em excesso)
 
-    // Passamos o ENDEREÇO da raizPistas (&raizPistas)
-    // para que a função possa modificá-la
+    // Chamada da função explorarSalas (a lógica da hash é feita dentro dela)
     atual = explorarSalas(atual, escolha, historicoVisitas, &numeroVisitas, &raizPista);
 
-    } while (escolha != 's');
+    } while (escolha != 's'); 
 
     // === FASE DE JULGAMENTO FINAL ===
     verificarSuspeitoFinal(raizPista);
@@ -169,20 +163,20 @@ int main() {
     // === EXIBE O HISTÓRICO ===
 
     printf("\n\n---- HISTÓRICO DE LUGARES VISITADOS ----\n");
-    for(int i = 0; i < numeroVisitas; i++){
-        printf("%d. %s\n", i + 1, historicoVisitas[i]);
+    for(int i = 0; i < numeroVisitas; i++){ // Itera sobre o histórico
+        printf("%d. %s\n", i + 1, historicoVisitas[i]); // Exibe cada visita
     }
     printf("------------------------------------\n");
-    // --- FIM DA EXIBIÇÃO ---
-    // === EXIBE AS PISTAS COLETADAS (EM ORDEM ALFABÉTICA) ===
+    
+    // === EXIBE AS PISTAS COLETADAS ===
     printf("\n\n---- PISTAS COLETADAS (EM ORDEM ALFABÉTICA) ----\n");
-    if(raizPista == NULL){
+    if(raizPista == NULL){ // Verifica se alguma pista foi coletada
         printf("Nenhuma Pista Coletada.\n");
     } else{
-        exibirPistas(raizPista); // Chama a exibição em-ordem
+        exibirPistas(raizPista);  // Exibe as pistas em ordem alfabética
     }
 
-
+    // === LIBERAÇÃO DE MEMÓRIA ===
     printf("------------------------------------\n");
     printf("Limpando a memória da mansão...\n");
     liberarMemoria(raiz);
@@ -197,71 +191,52 @@ int main() {
 //--------------------------INÍCIO DAS FUNÇÕES--------------------------
 void pausa() {
     printf("\nPressione [ENTER] para continuar...\n");
-    getchar(); // Espera o usuário pressionar Enter
+    getchar();
 }
 
 /**
- * @brief Cria uma função criarSala, para armazenar os nomes dos comodos do jogo
- * @param Recebe um valor que será armazenado como nome do comodo
- * armazena o ponteiro do endereço de memória dinamicamente pelo comando malloc
- * copia o nome recebido para a variavel nome indicada pelo ponteiro
- * cria e inicializa os ponteiros esquerda e direita
- * retorna o endereço da memória armazenado pela variável novo
+ * @brief Cria dinamicamente um cômodo (Nó) da mansão.
  */
 struct No* criarSala(char *valor, char *pista){
-    struct No* novo = (struct No*) malloc(sizeof(struct No));
+    struct No* novo = (struct No*) malloc(sizeof(struct No)); // Aloca memória para o novo nó
 
-    if (novo == NULL) {
+    if (novo == NULL) { // Verifica se a alocação foi bem-sucedida
         printf("Erro de alocacao de memoria para criarSala!\n");
-        exit(1);
+        exit(1); // Sai do programa em caso de erro
     }
 
-    strcpy(novo->nome, valor);
-    if (pista != NULL){
+    strcpy(novo->nome, valor); // Copia o nome do cômodo
+    if (pista != NULL){ // Verifica se a pista não é NULL
         strcpy(novo->pista, pista);
     } else {
         strcpy(novo->pista, ""); //Se a pista for NULL, define como string vazia
     }
+    // Inicializa os ponteiros dos filhos como NULL
     novo->esquerda = NULL;
     novo->direita = NULL;
 
-    return novo;
+    return novo; // Retorna o novo nó criado
 }
 
 /**
- * @brief Processa a escolha, salva no histórico e retorna o novo local.
- * @param raiz O nó ATUAL.
- * @param escolha A letra do jogador.
- * @param historico O array do histórico (passado por referência).
- * @param numvisitas Um PONTEIRO para o contador de visitas.
- * @param raizPistas Um PONTEIRO PARA O PONTEIRO da raiz da árvore de pistas.
- * @return O ponteiro para o NOVO nó.
+ * @brief Navega pela árvore (mansão) e ativa o sistema de pistas.
  */
-struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas, NoPista** raizPistas){ // Recebe 'char', retorna 'struct No*'
+struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *numvisitas, NoPista** raizPistas){ 
     struct No *proximoNo = raiz; // Nó temporário para checagem
 
-    if (escolha == 'e'){
-        if(raiz->esquerda != NULL){ //move o ponteiro
-            proximoNo = raiz->esquerda; // Pega o próximo nó
-          
-            pausa();
+    if (escolha == 'e'){ // Movimento para a esquerda
+        if(raiz->esquerda != NULL){ 
+            proximoNo = raiz->esquerda; 
         }
-        else{
+        else{ 
             printf("[CAMINHO BLOQUEADO] Não há nada à esquerda.\n");
             pausa();
             return raiz; // Retorna o nó atual (não se moveu)
         }
     }
-    else if(escolha == 'd'){
+    else if(escolha == 'd'){ // Movimento para a direita
         if(raiz->direita != NULL){
-            proximoNo = raiz->direita;
-            printf("Você entrou no(a) %s\n", raiz->nome);
-
-            if (*numvisitas < MAX_VISITAS) {
-            historico[*numvisitas] = raiz->nome;
-            (*numvisitas)++;
-            }
-            pausa();
+            proximoNo = raiz->direita; // Atualiza o nó temporário
         } else{
             printf("[CAMINHO BLOQUEADO] Não há nada à direita.\n");
             pausa();
@@ -287,16 +262,15 @@ struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *
 
     // 3. Adiciona ao histórico de visitas
     if(*numvisitas < MAX_VISITAS){
-    historico[*numvisitas] = raiz->nome;
-    (*numvisitas)++;
+        historico[*numvisitas] = raiz->nome; // Adiciona o nome da sala ao histórico
+        (*numvisitas)++; // Incrementa o número de visitas
     }
 
-    //4. (NOVO) Checa se há pista e a adiciona na ÁRVORE BST
-    if(raiz->pista[0] != '\0'){ // '\0' é o fim de uma string. Se [0] é '\0', a string está vazia.
+    //4. Checa se há pista e a adiciona na ÁRVORE BST
+    if(raiz->pista[0] != '\0'){ 
         printf("PISTA ENCONTRADA: %s\n", raiz->pista);
 
         // Insere a pista na BST.
-        // *raizPistas usada para "referenciar" o ponteiro para ponteiro
         *raizPistas = inserirPista(*raizPistas, raiz->pista);
 
     }
@@ -307,12 +281,7 @@ struct No* explorarSalas(struct No *raiz, char escolha, char *historico[], int *
 
 
 /**
- * @brief Libera a memória alocada para os ponteiros das estruturas da Árvore da Mansão
- * @param Estrutura raiz criada para armazenar a árvore
- * usa a função free
- * usa a recursividade para liberar primeiro dos galhos da esquerda e depois da direita
- * após isso, libera o nó principal
- * PÓS-ORDEM
+ * @brief Libera a memória alocada para os ponteiros das estruturas da Árvore da Mansão (Pós-Ordem).
  */
 void liberarMemoria(struct No *raiz){
     if(raiz != NULL){
@@ -326,8 +295,8 @@ void liberarMemoria(struct No *raiz){
  * @brief Cria um nó da árvore de Pistas.
  */
 NoPista* criarNoPista(char *pista){
-    NoPista* novo = (NoPista*) malloc(sizeof(NoPista));
-    if (novo == NULL) {
+    NoPista* novo = (NoPista*) malloc(sizeof(NoPista)); // Aloca memória para o novo nó
+    if (novo == NULL) { // Verifica se a alocação foi bem-sucedida
         printf("Erro de alocacao de memoria para criarNoPista!\n");
         exit(1);
     }
@@ -339,7 +308,6 @@ NoPista* criarNoPista(char *pista){
 
 /**
  * @brief Insere uma nova pista na BST (em ordem alfabética).
- * Esta é uma função recursiva padrão de inserção em BST.
  */
 NoPista* inserirPista(NoPista *raiz, char *pista){
     // 1. Se a árvore está vazia, cria um novo nó.
@@ -364,7 +332,6 @@ NoPista* inserirPista(NoPista *raiz, char *pista){
 
 /**
  * @brief Exibe as pistas da BST em ordem alfabética.
- * Isso é um percurso "em-ordem" (esquerda, raiz, direita).
  */
 void exibirPistas(NoPista *raiz){
     if(raiz == NULL){
@@ -395,58 +362,52 @@ void liberarPistas(NoPista * raiz){
 
 /**
  * @brief Função de Hashing simples baseada na soma dos valores ASCII.
- * @param chave A string da pista.
- * @return O índice da Tabela Hash (0 a TAMANHO_TABELA - 1).
  */
-int funcaoHash(const char *chave) {
-    unsigned long hash = 0;
-    for (int i = 0; i < strlen(chave); i++) {
-        hash = hash + chave[i];
+int funcaoHash(const char *chave) { // Pista como chave
+    unsigned long hash = 0; // Usamos unsigned long para evitar overflow
+    for (int i = 0; i < strlen(chave); i++) {  // Percorre cada caractere da chave
+        hash = hash + chave[i]; // Soma o valor ASCII do caractere ao hash
     }
-    return hash % TAMANHO_TABELA;
+    return hash % TAMANHO_TABELA; // Retorna o índice dentro do tamanho da tabela
 }
 
 /**
  * @brief Insere associação pista/suspeito na tabela hash.
- * @param pista A string da pista (chave).
- * @param suspeito O nome do suspeito (valor).
  */
 void inserirNaHash(const char *pista, const char *suspeito) {
-    int indice = funcaoHash(pista);
+    int indice = funcaoHash(pista); // Calcula o índice usando a função hash
 
     // Cria um novo item
-    ItemHash *novoItem = (ItemHash*) malloc(sizeof(ItemHash));
-    if (novoItem == NULL) {
+    ItemHash *novoItem = (ItemHash*) malloc(sizeof(ItemHash)); // Aloca memória para o novo item
+    if (novoItem == NULL) { // Verifica se a alocação foi bem-sucedida
         printf("Erro de alocacao de memoria para inserirNaHash!\n");
         return;
     }
 
     // Copia os dados
-    strncpy(novoItem->pista, pista, sizeof(novoItem->pista) - 1);
-    novoItem->pista[sizeof(novoItem->pista) - 1] = '\0';
+    strncpy(novoItem->pista, pista, sizeof(novoItem->pista) - 1); // Usa strncpy para evitar overflow
+    novoItem->pista[sizeof(novoItem->pista) - 1] = '\0'; // Garante terminação nula
     strncpy(novoItem->suspeito, suspeito, sizeof(novoItem->suspeito) - 1);
     novoItem->suspeito[sizeof(novoItem->suspeito) - 1] = '\0';
 
     // Insere no início da lista encadeada (tratamento de colisão)
-    novoItem->proximo = tabelaHash[indice];
-    tabelaHash[indice] = novoItem;
+    novoItem->proximo = tabelaHash[indice]; // Aponta para o item atual na posição
+    tabelaHash[indice] = novoItem; // Atualiza a cabeça da lista para o novo item
 }
 
 /**
  * @brief Consulta o suspeito correspondente a uma pista.
- * @param pista A string da pista (chave).
- * @return O nome do suspeito (valor) ou NULL se não encontrado.
  */
 const char* encontrarSuspeito(const char *pista) {
-    int indice = funcaoHash(pista);
-    ItemHash *atual = tabelaHash[indice];
+    int indice = funcaoHash(pista); // Calcula o índice usando a função hash
+    ItemHash *atual = tabelaHash[indice]; // Ponteiro para percorrer a lista encadeada
 
     // Percorre a lista encadeada no índice
     while (atual != NULL) {
-        if (strcmp(atual->pista, pista) == 0) {
-            return atual->suspeito; // Encontrado!
+        if (strcmp(atual->pista, pista) == 0) { // Pista encontrada
+            return atual->suspeito; // Encontrado! Retorna o nome do suspeito
         }
-        atual = atual->proximo;
+        atual = atual->proximo; // Avança para o próximo item na lista
     }
     return NULL; // Não encontrado
 }
@@ -455,8 +416,8 @@ const char* encontrarSuspeito(const char *pista) {
  * @brief Inicializa a tabela hash, definindo todos os ponteiros como NULL.
  */
 void inicializarHash() {
-    for (int i = 0; i < TAMANHO_TABELA; i++) {
-        tabelaHash[i] = NULL;
+    for (int i = 0; i < TAMANHO_TABELA; i++) { // Itera sobre cada posição da tabela
+        tabelaHash[i] = NULL; // Inicializa como NULL
     }
 }
 
@@ -464,48 +425,78 @@ void inicializarHash() {
  * @brief Libera a memória alocada para a Tabela Hash.
  */
 void liberarHash() {
-    for (int i = 0; i < TAMANHO_TABELA; i++) {
-        ItemHash *atual = tabelaHash[i];
+    for (int i = 0; i < TAMANHO_TABELA; i++) { // Itera sobre cada posição da tabela
+        ItemHash *atual = tabelaHash[i]; // Ponteiro para percorrer a lista encadeada
         while (atual != NULL) {
-            ItemHash *temp = atual;
-            atual = atual->proximo;
-            free(temp);
+            ItemHash *temp = atual; // Armazena o item atual
+            atual = atual->proximo; // Avança para o próximo item
+            free(temp); // Libera a memória do item armazenado
         }
-        tabelaHash[i] = NULL;
+        tabelaHash[i] = NULL; // Define a posição como NULL após liberar
     }
 }
 
 // --- FUNÇÕES DE JULGAMENTO FINAL ---
 
 /**
+ * @brief Percorre a BST de pistas e incrementa o contador do suspeito associado.
+ * @param raiz A raiz da BST de pistas.
+ * @param contagemPistas O array a ser atualizado com a contagem de pistas.
+ * (Função movida e corrigida para aceitar o array)
+ */
+void contarPistas(NoPista *raiz, int contagemPistas[]) {
+    if (raiz == NULL) return; // Caso base: árvore vazia 
+
+    // Percurso Em-Ordem 
+    contarPistas(raiz->esquerda, contagemPistas);
+
+    const char *suspeitoPista = encontrarSuspeito(raiz->pista); // Consulta o suspeito associado à pista
+    if (suspeitoPista != NULL) {
+        // Relaciona a pista coletada ao suspeito e incrementa o contador
+        for (int i = 0; i < MAX_SUSPEITOS; i++) {  
+            if (strcmp(suspeitoPista, NOMES_SUSPEITOS[i]) == 0) { // Suspeito encontrado
+                contagemPistas[i]++; // Incrementa o contador do suspeito
+                break;
+            }
+        }
+    }
+
+    contarPistas(raiz->direita, contagemPistas); // Continua o percurso
+}
+
+/**
  * @brief Conduz à fase de julgamento final, solicita a acusação e verifica a evidência.
- * @param raizPistas A raiz da BST contendo as pistas coletadas pelo jogador.
+ * @param raizPistas A raiz da BST de pistas coletadas.
+ * Verifica se o jogador tem evidência suficiente para acusar um suspeito.
+ * Uma acusação bem-sucedida requer pelo menos 2 pistas que apontem para o suspeito acusado.
+ * O culpado real, segundo a nova história, é a Sofia Mendes (Governanta).
  */
 void verificarSuspeitoFinal(NoPista *raizPistas) {
-    char acusacao[30];
-    int contagemPistas[MAX_SUSPEITOS] = {0};
-    int escolhaSuspeito = -1;
+    char acusacao[30]; // Armazena o nome do suspeito acusado
+    int contagemPistas[MAX_SUSPEITOS] = {0}; // Inicializa o array de contagem de pistas
+    int escolhaSuspeito = -1; // Inicializa a escolha do suspeito
 
     printf("\n\n************************************\n");
     printf("****** FASE DE ACUSAÇÃO FINAL ******\n");
     printf("************************************\n");
 
-    if (raizPistas == NULL) {
+    if (raizPistas == NULL) { // Verifica se alguma pista foi coletada
         printf("Você não coletou nenhuma pista. Acusação indisponível.\n");
         return;
     }
-
-    contarPistas(raizPistas, contagemPistas);
+    // 1. CONTAGEM DAS PISTAS COLETADAS
+    contarPistas(raizPistas, contagemPistas); // Chamada corrigida
 
     printf("\n** Pistas Coletadas por Suspeito **\n");
-    for (int i = 0; i < MAX_SUSPEITOS; i++) {
+    for (int i = 0; i < MAX_SUSPEITOS; i++) { // Exibe a contagem de pistas para cada suspeito
         printf("%d. %s: %d Pista(s)\n", i + 1, NOMES_SUSPEITOS[i], contagemPistas[i]);
     }
 
     // 2. SOLICITAÇÃO DA ACUSAÇÃO
     do {
-        printf("\nAcuse o culpado (digite o número do suspeito 1 a %d): ", MAX_SUSPEITOS);
-        if (scanf("%d", &escolhaSuspeito) != 1 || escolhaSuspeito < 1 || escolhaSuspeito > MAX_SUSPEITOS) {
+        printf("\nAcuse o culpado (digite o número do suspeito 1 a %d): ", MAX_SUSPEITOS); 
+        // se a entrada for inválida, ou seja, não for um número entre 1 e MAX_SUSPEITOS, pede novamente
+        if (scanf("%d", &escolhaSuspeito) != 1 || escolhaSuspeito < 1 || escolhaSuspeito > MAX_SUSPEITOS) { 
             printf("Opção inválida. Tente novamente.\n");
             // Limpa o buffer de entrada
             while (getchar() != '\n');
@@ -513,7 +504,7 @@ void verificarSuspeitoFinal(NoPista *raizPistas) {
         }
         // Consome a nova linha após o número
         while (getchar() != '\n'); 
-    } while (escolhaSuspeito == -1);
+    } while (escolhaSuspeito == -1); // Repete até uma escolha válida
 
     // Obtém o nome do suspeito acusado
     strcpy(acusacao, NOMES_SUSPEITOS[escolhaSuspeito - 1]);
@@ -524,13 +515,13 @@ void verificarSuspeitoFinal(NoPista *raizPistas) {
     printf("\n------------------------------------\n");
     printf("ACUSADO: %s\n", acusacao);
 
-    // O Culpado REAL, segundo as pistas inseridas na Hash, é o Lucas Varga (Filho).
-    const char *CULPADO_REAL = "Lucas Varga (Filho)"; 
+    // O Culpado REAL, segundo a nova história, é a Sofia Mendes (Governanta).
+    const char *CULPADO_REAL = "Sofia Mendes (Governanta)"; 
 
-    if (contagemPistas[indiceAcusado] >= 2) {
+    if (contagemPistas[indiceAcusado] >= 2) { // Verifica se há evidência suficiente
         printf("EVIDÊNCIA SUFICIENTE: Você possui %d pista(s) que apontam para %s.\n", contagemPistas[indiceAcusado], acusacao);
         
-        if (strcmp(acusacao, CULPADO_REAL) == 0) {
+        if (strcmp(acusacao, CULPADO_REAL) == 0) { // Acusação correta
             printf("\nPARABÉNS, DETETIVE! VOCÊ ACERTOU!\n");
             printf("Com base nas pistas, a sua acusação de **%s** está correta.\n", CULPADO_REAL);
         } else {
@@ -544,29 +535,4 @@ void verificarSuspeitoFinal(NoPista *raizPistas) {
         printf("Você não conseguiu provar o caso. O verdadeiro culpado, **%s**, escapou!\n", CULPADO_REAL);
     }
     printf("------------------------------------\n");
-}
-
-/**
- * @brief Percorre a BST de pistas e incrementa o contador do suspeito associado.
- * @param raiz A raiz da BST de pistas.
- * @param contagemPistas O array a ser atualizado com a contagem de pistas.
- */
-void contarPistas(NoPista *raiz, int contagemPistas[]) {
-    if (raiz == NULL) return;
-
-    // Percurso Em-Ordem 
-    contarPistas(raiz->esquerda, contagemPistas);
-
-    const char *suspeitoPista = encontrarSuspeito(raiz->pista);
-    if (suspeitoPista != NULL) {
-        // Relaciona a pista coletada ao suspeito e incrementa o contador
-        for (int i = 0; i < MAX_SUSPEITOS; i++) {
-            if (strcmp(suspeitoPista, NOMES_SUSPEITOS[i]) == 0) {
-                contagemPistas[i]++;
-                break;
-            }
-        }
-    }
-
-    contarPistas(raiz->direita, contagemPistas);
 }
